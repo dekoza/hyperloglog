@@ -6,8 +6,9 @@ import heapq
 import math
 from hashlib import sha1
 from itertools import chain
+from typing import Sequence
 
-from .hll import get_treshold, estimate_bias, get_alpha, get_rho
+from .hll import estimate_bias, get_alpha, get_rho, get_treshold
 
 
 class SlidingHyperLogLog(object):
@@ -60,6 +61,25 @@ class SlidingHyperLogLog(object):
     def from_list(cls, lpfm, window):
         return cls(None, window, lpfm)
 
+    def _recalc(self, tmp2: Sequence):
+        r_max = None
+        tmp = []
+        tmax = None
+
+        for t, R in reversed(tmp2):
+            if tmax is None:
+                tmax = t
+
+            if t < (tmax - self.window):
+                break
+
+            if r_max is None or R > r_max:
+                tmp.append((t, R))
+                r_max = R
+
+        tmp.reverse()
+        return tuple(tmp) if tmp else None
+
     def add(self, timestamp, value):
         """
         Adds the item to the HyperLogLog
@@ -80,28 +100,13 @@ class SlidingHyperLogLog(object):
         w = x >> self.p
         R = get_rho(w, 64 - self.p)
 
-        Rmax = None
-        tmp = []
-        tmax = None
         tmp2 = list(
             heapq.merge(
                 self.LPFM[j] if self.LPFM[j] is not None else [], [(timestamp, R)]
             )
         )
 
-        for t, R in reversed(tmp2):
-            if tmax is None:
-                tmax = t
-
-            if t < (tmax - self.window):
-                break
-
-            if Rmax is None or R > Rmax:
-                tmp.append((t, R))
-                Rmax = R
-
-        tmp.reverse()
-        self.LPFM[j] = tuple(tmp) if tmp else None
+        self.LPFM[j] = self._recalc(tmp2)
 
     def update(self, *others):
         """
@@ -113,9 +118,6 @@ class SlidingHyperLogLog(object):
                 raise ValueError("Counters precisions should be equal")
 
         for j in range(len(self.LPFM)):
-            Rmax = None
-            tmp = []
-            tmax = None
             tmp2 = list(
                 heapq.merge(
                     *chain(
@@ -127,20 +129,7 @@ class SlidingHyperLogLog(object):
                     )
                 )
             )
-
-            for t, R in reversed(tmp2):
-                if tmax is None:
-                    tmax = t
-
-                if t < (tmax - self.window):
-                    break
-
-                if Rmax is None or R > Rmax:
-                    tmp.append((t, R))
-                    Rmax = R
-
-            tmp.reverse()
-            self.LPFM[j] = tuple(tmp) if tmp else None
+            self.LPFM[j] = self._recalc(tmp2)
 
     def __eq__(self, other):
         if self.m != other.m:
@@ -168,8 +157,8 @@ class SlidingHyperLogLog(object):
         if not 0 < window <= self.window:
             raise ValueError("0 < window <= W")
 
-        def max_r(l):
-            return max(l) if l else 0
+        def max_r(sequence: Sequence) -> int:
+            return max(sequence) if sequence else 0
 
         M = [
             max_r([R for ts, R in lpfm if ts >= (timestamp - window)]) if lpfm else 0
@@ -202,7 +191,7 @@ class SlidingHyperLogLog(object):
         for lpfm in self.LPFM:
             R_max = 0
             _p = len(tsl) - 1
-            if lpfm:
+            if lpfm is not None:
                 i = len(lpfm) - 1
                 while i >= 0:
                     ts, R = lpfm[i]

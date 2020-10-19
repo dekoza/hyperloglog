@@ -6,7 +6,7 @@ import math
 from hashlib import sha1
 from itertools import chain
 
-from .const import rawEstimateData, biasData, tresholdData
+from .const import biasData, rawEstimateData, tresholdData
 
 
 def bit_length(w):
@@ -15,11 +15,6 @@ def bit_length(w):
 
 def bit_length_emu(w):
     return len(bin(w)) - 2 if w > 0 else 0
-
-
-# Workaround for python < 2.7
-if not hasattr(int, "bit_length"):
-    bit_length = bit_length_emu
 
 
 def get_treshold(p):
@@ -98,8 +93,8 @@ class HyperLogLog(object):
         return {x: getattr(self, x) for x in self.__slots__}
 
     def __setstate__(self, d):
-        for key in d:
-            setattr(self, key, d[key])
+        for key, value in d.items():
+            setattr(self, key, value)
 
     def add(self, value):
         """
