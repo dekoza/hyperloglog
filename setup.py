@@ -2,21 +2,20 @@
 
 from distutils.core import setup
 
-version = '0.0.12'
+version = "0.0.12"
 
 setup(
-    name='hyperloglog',
+    name="hyperloglog",
     version=version,
-    maintainer='Vasily Evseenko',
-    maintainer_email='svpcom@gmail.com',
-    author='Vasily Evseenko',
-    author_email='svpcom@gmail.com',
-    packages=['hyperloglog', 'hyperloglog.test'],
-    description='HyperLogLog cardinality counter',
-    url='https://github.com/svpcom/hyperloglog',
-    license='LGPL 2.1 or later',
-    long_description=\
-"""
+    maintainer="Vasily Evseenko",
+    maintainer_email="svpcom@gmail.com",
+    author="Vasily Evseenko",
+    author_email="svpcom@gmail.com",
+    packages=["hyperloglog", "hyperloglog.test"],
+    description="HyperLogLog cardinality counter",
+    url="https://github.com/svpcom/hyperloglog",
+    license="LGPL 2.1 or later",
+    long_description="""
 Python implementation of the Hyper LogLog and Sliding Hyper LogLog cardinality counter
 algorithms. Added bias correction from HLL++.
 

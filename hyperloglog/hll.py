@@ -4,8 +4,9 @@ This module implements probabilistic data structure which is able to calculate t
 
 import math
 from hashlib import sha1
+from itertools import chain
+
 from .const import rawEstimateData, biasData, tresholdData
-from .compat import *
 
 
 def bit_length(w):
@@ -17,7 +18,7 @@ def bit_length_emu(w):
 
 
 # Workaround for python < 2.7
-if not hasattr(int, 'bit_length'):
+if not hasattr(int, "bit_length"):
     bit_length = bit_length_emu
 
 
@@ -28,12 +29,15 @@ def get_treshold(p):
 def estimate_bias(E, p):
     bias_vector = biasData[p - 4]
     nearest_neighbors = get_nearest_neighbors(E, rawEstimateData[p - 4])
-    return sum([float(bias_vector[i]) for i in nearest_neighbors]) / len(nearest_neighbors)
+    return sum(float(bias_vector[i]) for i in nearest_neighbors) / len(
+        nearest_neighbors
+    )
 
 
 def get_nearest_neighbors(E, estimate_vector):
-    distance_map = [((E - float(val)) ** 2, idx) for idx, val in enumerate(estimate_vector)]
-    distance_map.sort()
+    distance_map = sorted(
+        ((E - float(val)) ** 2, idx) for idx, val in enumerate(estimate_vector)
+    )
     return [idx for dist, idx in distance_map[:6]]
 
 
@@ -57,7 +61,7 @@ def get_rho(w, max_width):
     rho = max_width - bit_length(w) + 1
 
     if rho <= 0:
-        raise ValueError('w overflow')
+        raise ValueError("w overflow")
 
     return rho
 
@@ -67,7 +71,7 @@ class HyperLogLog(object):
     HyperLogLog cardinality counter
     """
 
-    __slots__ = ('alpha', 'p', 'm', 'M')
+    __slots__ = ("alpha", "p", "m", "M")
 
     def __init__(self, error_rate):
         """
@@ -88,10 +92,10 @@ class HyperLogLog(object):
         self.alpha = get_alpha(p)
         self.p = p
         self.m = 1 << p
-        self.M = [ 0 for i in range(self.m) ]
+        self.M = [0 for i in range(self.m)]
 
     def __getstate__(self):
-        return dict([x, getattr(self, x)] for x in self.__slots__)
+        return {x: getattr(self, x) for x in self.__slots__}
 
     def __setstate__(self, d):
         for key in d:
@@ -107,7 +111,12 @@ class HyperLogLog(object):
         # w = <x_{p}x_{p+1}..>
         # M[j] = max(M[j], rho(w))
 
-        x = long(sha1(bytes(value.encode('utf8') if isinstance(value, unicode) else value)).hexdigest()[:16], 16)
+        x = int(
+            sha1(
+                bytes(value.encode("utf8") if isinstance(value, str) else value)
+            ).hexdigest()[:16],
+            16,
+        )
         j = x & (self.m - 1)
         w = x >> self.p
 
@@ -120,13 +129,15 @@ class HyperLogLog(object):
 
         for item in others:
             if self.m != item.m:
-                raise ValueError('Counters precisions should be equal')
+                raise ValueError("Counters precisions should be equal")
 
-        self.M = [max(*items) for items in zip(*([ item.M for item in others ] + [ self.M ]))]
+        self.M = [
+            max(*items) for items in zip(*chain((item.M for item in others), [self.M]))
+        ]
 
     def __eq__(self, other):
         if self.m != other.m:
-            raise ValueError('Counters precisions should be equal')
+            raise ValueError("Counters precisions should be equal")
 
         return self.M == other.M
 
@@ -145,7 +156,7 @@ class HyperLogLog(object):
         Returns the estimate of the cardinality
         """
 
-        #count number or registers equal to 0
+        # count number or registers equal to 0
         V = self.M.count(0)
 
         if V > 0:
@@ -153,4 +164,3 @@ class HyperLogLog(object):
             return H if H <= get_treshold(self.p) else self._Ep()
         else:
             return self._Ep()
-

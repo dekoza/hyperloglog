@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
-from unittest import TestCase
-from hyperloglog.hll import HyperLogLog, get_alpha, get_rho
-from hyperloglog.const import biasData, tresholdData, rawEstimateData
-from hyperloglog.compat import *
 import math
 import os
 import pickle
+from unittest import TestCase
+
+from hyperloglog.const import tresholdData
+from hyperloglog.hll import HyperLogLog, get_alpha, get_rho
 
 
 class HyperLogLogTestCase(TestCase):
@@ -15,7 +15,17 @@ class HyperLogLogTestCase(TestCase):
 
     def test_alpha(self):
         alpha = [get_alpha(b) for b in range(4, 10)]
-        self.assertEqual(alpha, [0.673, 0.697, 0.709, 0.7152704932638152, 0.7182725932495458, 0.7197831133217303])
+        self.assertEqual(
+            alpha,
+            [
+                0.673,
+                0.697,
+                0.709,
+                0.7152704932638152,
+                0.7182725932495458,
+                0.7197831133217303,
+            ],
+        )
 
     def test_alpha_bad(self):
         self.assertRaises(ValueError, get_alpha, 1)
@@ -35,6 +45,7 @@ class HyperLogLogTestCase(TestCase):
 
     def test_rho_emu(self):
         from hyperloglog import hll
+
         old = hll.bit_length
         hll.bit_length = hll.bit_length_emu
         try:
@@ -66,7 +77,21 @@ class HyperLogLogTestCase(TestCase):
 
         M = [(i, v) for i, v in enumerate(s.M) if v > 0]
 
-        self.assertEqual(M, [(1, 1), (41, 1), (44, 1), (76, 3), (103, 4), (182, 1), (442, 2), (464, 5), (497, 1), (506, 1)])
+        self.assertEqual(
+            M,
+            [
+                (1, 1),
+                (41, 1),
+                (44, 1),
+                (76, 3),
+                (103, 4),
+                (182, 1),
+                (442, 2),
+                (464, 5),
+                (497, 1),
+                (506, 1),
+            ],
+        )
 
     def test_calc_cardinality(self):
         clist = [1, 5, 10, 30, 60, 200, 1000, 10000, 60000]
@@ -75,10 +100,10 @@ class HyperLogLogTestCase(TestCase):
 
         for card in clist:
             s = 0.0
-            for c in xrange(n):
+            for c in range(n):
                 a = HyperLogLog(rel_err)
 
-                for i in xrange(card):
+                for i in range(card):
                     a.add(os.urandom(20))
 
                 s += a.card()
@@ -87,17 +112,16 @@ class HyperLogLogTestCase(TestCase):
             self.assertLess(-3, z)
             self.assertGreater(3, z)
 
-
     def test_update(self):
         a = HyperLogLog(0.05)
         b = HyperLogLog(0.05)
         c = HyperLogLog(0.05)
 
-        for i in xrange(2):
+        for i in range(2):
             a.add(str(i))
             c.add(str(i))
 
-        for i in xrange(2, 4):
+        for i in range(2, 4):
             b.add(str(i))
             c.add(str(i))
 
@@ -106,7 +130,6 @@ class HyperLogLogTestCase(TestCase):
         self.assertNotEqual(a, b)
         self.assertNotEqual(b, c)
         self.assertEqual(a, c)
-
 
     def test_update_err(self):
         a = HyperLogLog(0.05)

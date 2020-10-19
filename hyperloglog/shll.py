@@ -2,11 +2,12 @@
 Sliding HyperLogLog
 """
 
-import math
 import heapq
+import math
 from hashlib import sha1
+from itertools import chain
+
 from .hll import get_treshold, estimate_bias, get_alpha, get_rho
-from .compat import *
 
 
 class SlidingHyperLogLog(object):
@@ -14,7 +15,7 @@ class SlidingHyperLogLog(object):
     Sliding HyperLogLog: Estimating cardinality in a data stream (Telecom ParisTech)
     """
 
-    __slots__ = ('window', 'alpha', 'p', 'm', 'LPFM')
+    __slots__ = ("window", "alpha", "p", "m", "LPFM")
 
     def __init__(self, error_rate, window, lpfm=None):
         """
@@ -30,7 +31,7 @@ class SlidingHyperLogLog(object):
             p = int(round(math.log(m, 2)))
 
             if (1 << p) != m:
-                raise ValueError('List length is not power of 2')
+                raise ValueError("List length is not power of 2")
             self.LPFM = lpfm
 
         else:
@@ -42,14 +43,14 @@ class SlidingHyperLogLog(object):
 
             p = int(math.ceil(math.log((1.04 / error_rate) ** 2, 2)))
             m = 1 << p
-            self.LPFM = [None for i in range(m)]
+            self.LPFM = [None] * m
 
         self.alpha = get_alpha(p)
         self.p = p
         self.m = m
 
     def __getstate__(self):
-        return dict([x, getattr(self, x)] for x in self.__slots__)
+        return {x: getattr(self, x) for x in self.__slots__}
 
     def __setstate__(self, d):
         for key in d:
@@ -69,7 +70,12 @@ class SlidingHyperLogLog(object):
         # w = <x_{p}x_{p+1}..>
         # <t_i, rho(w)>
 
-        x = long(sha1(bytes(value.encode() if isinstance(value, unicode) else value)).hexdigest()[:16], 16)
+        x = int(
+            sha1(
+                bytes(value.encode() if isinstance(value, str) else value)
+            ).hexdigest()[:16],
+            16,
+        )
         j = x & (self.m - 1)
         w = x >> self.p
         R = get_rho(w, 64 - self.p)
@@ -77,7 +83,11 @@ class SlidingHyperLogLog(object):
         Rmax = None
         tmp = []
         tmax = None
-        tmp2 = list(heapq.merge(self.LPFM[j] if self.LPFM[j] is not None else [], [(timestamp, R)]))
+        tmp2 = list(
+            heapq.merge(
+                self.LPFM[j] if self.LPFM[j] is not None else [], [(timestamp, R)]
+            )
+        )
 
         for t, R in reversed(tmp2):
             if tmax is None:
@@ -100,13 +110,23 @@ class SlidingHyperLogLog(object):
 
         for item in others:
             if self.m != item.m:
-                raise ValueError('Counters precisions should be equal')
+                raise ValueError("Counters precisions should be equal")
 
-        for j in xrange(len(self.LPFM)):
+        for j in range(len(self.LPFM)):
             Rmax = None
             tmp = []
             tmax = None
-            tmp2 = list(heapq.merge(*([item.LPFM[j] if item.LPFM[j] is not None else [] for item in others] + [self.LPFM[j] if self.LPFM[j] is not None else []])))
+            tmp2 = list(
+                heapq.merge(
+                    *chain(
+                        (
+                            item.LPFM[j] if item.LPFM[j] is not None else []
+                            for item in others
+                        ),
+                        [self.LPFM[j] if self.LPFM[j] is not None else []],
+                    )
+                )
+            )
 
             for t, R in reversed(tmp2):
                 if tmax is None:
@@ -124,7 +144,7 @@ class SlidingHyperLogLog(object):
 
     def __eq__(self, other):
         if self.m != other.m:
-            raise ValueError('Counters precisions should be equal')
+            raise ValueError("Counters precisions should be equal")
 
         return self.LPFM == other.LPFM
 
@@ -146,14 +166,17 @@ class SlidingHyperLogLog(object):
             window = self.window
 
         if not 0 < window <= self.window:
-            raise ValueError('0 < window <= W')
+            raise ValueError("0 < window <= W")
 
         def max_r(l):
             return max(l) if l else 0
 
-        M = [max_r([R for ts, R in lpfm if ts >= (timestamp - window)]) if lpfm else 0 for lpfm in self.LPFM]
+        M = [
+            max_r([R for ts, R in lpfm if ts >= (timestamp - window)]) if lpfm else 0
+            for lpfm in self.LPFM
+        ]
 
-        #count number or registers equal to 0
+        # count number or registers equal to 0
         V = M.count(0)
         if V > 0:
             H = self.m * math.log(self.m / float(V))
@@ -167,10 +190,11 @@ class SlidingHyperLogLog(object):
         """
         for window in window_list:
             if not 0 < window <= self.window:
-                raise ValueError('0 < window <= W')
+                raise ValueError("0 < window <= W")
 
-        tsl = [(timestamp - window, idx) for idx, window in enumerate(window_list)]
-        tsl.sort()
+        tsl = sorted(
+            (timestamp - window, idx) for idx, window in enumerate(window_list)
+        )
 
         M_list = [[] for _ in window_list]
 
@@ -184,19 +208,21 @@ class SlidingHyperLogLog(object):
                     ts, R = lpfm[i]
                     while _p >= 0:
                         _ts, _idx = tsl[_p]
-                        if ts >= _ts: break
+                        if ts >= _ts:
+                            break
                         M_list[_idx].append(R_max)
                         _p -= 1
-                    if _p < 0: break
+                    if _p < 0:
+                        break
                     R_max = R
                     i -= 1
 
-            for i in xrange(0, _p + 1):
+            for i in range(0, _p + 1):
                 M_list[tsl[i][1]].append(R_max)
 
         res = []
         for M in M_list:
-            #count number or registers equal to 0
+            # count number or registers equal to 0
             V = M.count(0)
             if V > 0:
                 H = self.m * math.log(self.m / float(V))

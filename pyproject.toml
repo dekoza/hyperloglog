@@ -1,0 +1,29 @@
+[tool.poetry]
+name = "hyperloglog"
+version = "0.1.0"
+description = "HyperLogLog cardinality counter"
+authors = [
+    "Dominik Kozaczko <dominik@kozaczko.info>",
+    "Vasily Evseenko <svpcom@gmail.com>",
+]
+license = "LGPL-2.1"
+repository = 'https://github.com/dekoza/hyperloglog'
+classifiers = [
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.1.1"
+ipython = "^7.18.1"
+ipdb = "^0.13.4"
+mypy = "^0.790"
+pre-commit = "^2.7.1"
+black = "^20.8b1"
+tox = "^3.20.1"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
